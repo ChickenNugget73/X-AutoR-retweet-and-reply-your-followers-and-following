@@ -1,0 +1,117 @@
+import tweepy
+import time
+
+# your api keys and tokens
+API_Key = 'your-api-key'
+API_Secrect_Key = 'your-api-secrect-key'
+Access_Token = 'your-Access_Token-secrect-key'
+
+# Tweepy authorization
+auth = tweepy.0AuthHandler(API_Key, API_Secrect_Key)
+auth.set_access_token (Access_Token, Access_Token-secrect)
+api = tweepy.Api(auth)
+wait_on_rate_limit=True
+wait_on_rate_limit_notify=True
+
+# api rate limits
+MAX_RETWEETS_PER_15_MINUTES = 300 # Free tier generally allows up to 300 retweets per 15-minute window
+MAX_COMMENTS_PER_15_MINUTES = 75 # free tier generally allows up too 75 comments per 15-minute window
+
+# Track the time of the last Api usuage
+last_retweet_time = datetime.now()
+last_comment_time = datetime.now()
+
+# Retweet the most recent tweet from each following every 10 hours
+def auto_retweet_following():
+	global last_retweet_time
+	following = api.get_friend_ids() # get list of following id
+	retweet_count = 0
+	
+	for following_id in following:
+		if retweet_count >= MAX_RETWEETS_PER_15_MINUTES:
+										break
+									try:
+										# Get the most recent tweet of the following
+										tweets = api.user_timeline(user_id=following_id, count=1)
+										if tweets:
+											tweet = tweets[0]
+											api.retweet(tweet.id)
+											retweet_count += 1
+											print(f"retweeted:
+											{tweet.text} from 
+											{tweet.user.screen_name}")
+														time.sleep(5)	# sleep to avoid hitting rate limits
+												
+													except tweepy.TweepError as e:
+														print(f"Error:
+											{e.response}")
+
+												last_retweet_time = datetime.now()
+
+											# search for tweets with specific keywords among followers and following and auto-comment
+											def auto_comment_on_tweets(keyword,
+											comment, daily_limit=5):
+												global last_comment_time
+
+												followers_ids = 
+											api.get_follower_ids() # get list of follower IDS
+												all_ids = set(follower_ids + 
+											following_ids)
+
+												comment_count = 0
+
+												for user_id in all_ids:
+													if comment_count >= 
+													min(daily_limit,
+													MAX_COMMENTS_PER_15_MINUTES):
+
+														break 
+													try:
+														tweets = 
+												api.user_timeline(user_id=user_id,
+												count=10) #check the last 10 tweets for each user
+														for tweet in tweets:
+															for i, keywords in
+												enumerate(keyword_sets):
+																if
+											any(keyword.lower() in
+											tweet.text.lower() for keyword in
+											keywords):
+
+											api.update_status(status=comments[i],
+											in_reply_to_status_id=tweet.id,
+											auto_populate_reply_metadata=True)
+																	comment_count +=1
+
+											print(f"Commented: '{comments[i]}' on tweet: {tweet.text}")
+																	if comment_count
+											>= min(daily_limit,
+											MAX_COMMENT_PER_15_MINUTES):
+																break
+														time.sleep(5) # sleep to avoid hitting rate limits
+														
+													except tweepy.TweepError as e:
+														print(f"Error:
+											{e.response}")
+
+												last_comment_time = datetime.now()
+
+											# main loop to run retweeting every 10hours and keyword commenting daily
+											While True:
+												# check if it's time to retweet (every 10 hours)
+												if datetime.now() -
+											last_retweet_time . timedelta(hours=10):
+													auto_retweet_following()
+
+												# Define your keyword sets and corresponding comments
+												keyword_set = [["keyword1_set1",
+												"keyword2_set1"], ["keyword1_set2", "keyword2_set2"]]
+													comments = ["YourCommentForSet1", "YourCommentForSet2"]
+
+												# Auto-Comment based on the keyword sets
+
+												auto_comment_on_tweets(keyword_sets=keyword_sets, comments=comments,
+												daily_limit=5)
+
+													# sleep for 15 minutes between cycles to stay within rate limits
+													time.sleep(15 * 60)
