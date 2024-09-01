@@ -1,0 +1,78 @@
+import tweepy
+import time
+from datetime import datetime, timedelta
+
+# Your API keys and tokens
+API_KEY = 'your_api_key'
+API_SECRET_KEY = 'your_api_secret_key'
+ACCESS_TOKEN = 'your_access_token'
+ACCESS_TOKEN_SECRET = 'your_access_token_secret'
+
+# Tweepy authorization
+auth = tweepy.OAuthHandler(API_KEY, API_SECRET_KEY)
+auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+
+# API rate limits
+MAX_RETWEETS_PER_15_MINUTES = 300  # Free tier generally allows up to 300 retweets per 15-minute window
+MAX_COMMENTS_PER_15_MINUTES = 75   # Free tier generally allows up to 75 comments per 15-minute window
+
+# Track the time of the last API usage
+last_retweet_time = datetime.now()
+last_comment_time = datetime.now()
+
+# Retweet the most recent tweet from each following every 10 hours
+def auto_retweet_following():
+    global last_retweet_time
+    following = api.get_friend_ids()  # Get list of following IDs
+    retweet_count = 0
+
+    for following_id in following:
+        if retweet_count >= MAX_RETWEETS_PER_15_MINUTES:
+            break
+        try:
+            # Get the most recent tweet of the following
+            tweets = api.user_timeline(user_id=following_id, count=1)
+            if tweets:
+                tweet = tweets[0]
+                api.retweet(tweet.id)
+                retweet_count += 1
+                print(f"Retweeted: {tweet.text} from {tweet.user.screen_name}")
+            time.sleep(5)  # Sleep to avoid hitting rate limits
+
+        except tweepy.TweepError as e:
+            print(f"Error: {e.response}")
+
+    last_retweet_time = datetime.now()
+
+# Search for tweets with specific keywords and auto-comment
+def auto_comment_on_tweets(keyword, comment, daily_limit=5):
+    global last_comment_time
+    search_results = api.search_tweets(q=keyword, count=5, result_type="recent")
+    comment_count = 0
+
+    for tweet in search_results:
+        if comment_count >= min(daily_limit, MAX_COMMENTS_PER_15_MINUTES):
+            break
+        try:
+            api.update_status(status=comment, in_reply_to_status_id=tweet.id, auto_populate_reply_metadata=True)
+            comment_count += 1
+            print(f"Commented: '{comment}' on tweet: {tweet.text}")
+            time.sleep(5)  # Sleep to avoid hitting rate limits
+
+        except tweepy.TweepError as e:
+            print(f"Error: {e.response}")
+
+    last_comment_time = datetime.now()
+
+# Main loop to run retweeting every 10 hours and keyword commenting daily
+while True:
+    # Check if it's time to retweet (every 10 hours)
+    if datetime.now() - last_retweet_time > timedelta(hours=10):
+        auto_retweet_following()
+
+    # Keyword and comment settings
+    auto_comment_on_tweets(keyword="YourKeyword", comment="YourComment", daily_limit=5)
+
+    # Sleep for 15 minutes between cycles to stay within rate limits
+    time.sleep(15 * 60)
